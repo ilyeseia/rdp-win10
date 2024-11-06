@@ -2,6 +2,10 @@
 
 # تحميل سكريبت ngrok وتثبيته
 wget -O ng.sh https://github.com/ilyeseia/rdp-win10/raw/main/ngrok.sh >/dev/null 2>&1
+if [ ! -f ng.sh ]; then
+    echo "Failed to download ngrok.sh. Check the URL and try again."
+    exit 1
+fi
 chmod +x ng.sh
 ./ng.sh
 
@@ -35,16 +39,22 @@ echo "in - India (Mumbai)"
 read -p "Choose ngrok region: " REGION
 
 ./ngrok tcp --region "$REGION" 4000 >/dev/null 2>&1 &
-sleep 1
+sleep 5  # زيادة التأخير لتأكيد تشغيل ngrok
 
-# التحقق من تشغيل ngrok
-if curl --silent --show-error http://127.0.0.1:4040/api/tunnels >/dev/null 2>&1; then 
-    echo "Ngrok connected successfully."
-else 
-    echo "Ngrok Error! Please try again."
-    sleep 1
-    goto ngrok
-fi
+# التحقق من تشغيل ngrok مع محاولات محدودة
+MAX_RETRIES=5
+RETRY_COUNT=0
+
+while ! curl --silent --show-error http://127.0.0.1:4040/api/tunnels >/dev/null 2>&1; do
+    if [ "$RETRY_COUNT" -ge "$MAX_RETRIES" ]; then
+        echo "Failed to connect to ngrok after $MAX_RETRIES attempts."
+        exit 1
+    fi
+    echo "Ngrok Error! Retrying in 5 seconds..."
+    sleep 5
+    ((RETRY_COUNT++))
+done
+echo "Ngrok connected successfully."
 
 # تشغيل حاوية Docker
 docker run --rm -d --network host --privileged --name nomachine-xfce4 \
