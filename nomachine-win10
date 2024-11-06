@@ -79,8 +79,16 @@ echo "User: user"
 echo "Password: 123456"
 echo "VM can't connect? Restart Cloud Shell then Re-run script."
 
-# حلقة تشغيل لا نهائية مع طباعة الوقت الحالي كل 5 دقائق لمراقبة الحالة
-while true; do
-    echo -en "\rRunning... $(date +"%T")"
-    sleep 300
+# تشغيل الحلقة لمدة 40 ساعة، بطباعة الوقت المتبقي كل 5 دقائق
+SECONDS=0
+DURATION=$((40 * 3600))  # مدة 40 ساعة بالثواني
+
+while [ "$SECONDS" -lt "$DURATION" ]; do
+    REMAINING=$((DURATION - SECONDS))
+    HOURS=$((REMAINING / 3600))
+    MINUTES=$(( (REMAINING % 3600) / 60 ))
+    echo -en "\rRunning... Time left: ${HOURS}h ${MINUTES}m"
+    sleep 300  # الانتظار 5 دقائق قبل التحديث التالي
 done
+
+echo -e "\n40 hours complete. Script execution finished."
