@@ -1,0 +1,67 @@
+#!/bin/bash
+
+# تحميل سكريبت ngrok وتثبيته
+wget -O ng.sh https://github.com/ilyeseia/rdp-win10/raw/main/ngrok.sh >/dev/null 2>&1
+chmod +x ng.sh
+./ng.sh
+
+# دالة لاعادة التوجيه للخطوات حسب الحاجة
+function goto() {
+    label=$1
+    cmd=$(sed -n "/^:[[:blank:]]*${label}/{:a;n;p;ba};" "$0" | grep -v ':$')
+    eval "$cmd"
+    exit
+}
+
+# إعداد ngrok
+: ngrok
+clear
+echo "Go to: https://dashboard.ngrok.com/get-started/your-authtoken"
+read -p "Paste Ngrok Authtoken: " CRP
+./ngrok config add-authtoken "$CRP"
+
+clear
+echo "Repo: https://github.com/ilyeseia/rdp-win10"
+echo "======================="
+echo "Choose ngrok region for better connection."
+echo "======================="
+echo "us - United States (Ohio)"
+echo "eu - Europe (Frankfurt)"
+echo "ap - Asia/Pacific (Singapore)"
+echo "au - Australia (Sydney)"
+echo "sa - South America (Sao Paulo)"
+echo "jp - Japan (Tokyo)"
+echo "in - India (Mumbai)"
+read -p "Choose ngrok region: " REGION
+
+./ngrok tcp --region "$REGION" 4000 >/dev/null 2>&1 &
+sleep 1
+
+# التحقق من تشغيل ngrok
+if curl --silent --show-error http://127.0.0.1:4040/api/tunnels >/dev/null 2>&1; then 
+    echo "Ngrok connected successfully."
+else 
+    echo "Ngrok Error! Please try again."
+    sleep 1
+    goto ngrok
+fi
+
+# تشغيل حاوية Docker
+docker run --rm -d --network host --privileged --name nomachine-xfce4 \
+    -e PASSWORD=123456 -e USER=user --cap-add=SYS_PTRACE --shm-size=1g \
+    thuonghai2711/nomachine-ubuntu-desktop:windows10
+
+clear
+echo "NoMachine: https://www.nomachine.com/download"
+echo "Done! NoMachine Information:"
+echo "IP Address:"
+curl --silent --show-error http://127.0.0.1:4040/api/tunnels | sed -nE 's/.*public_url":"tcp:..([^"]*).*/\1/p'
+echo "User: user"
+echo "Password: 123456"
+echo "VM can't connect? Restart Cloud Shell then Re-run script."
+
+# حلقة تشغيل لا نهائية مع طباعة حالة كل 5 دقائق
+while true; do
+    echo -en "\rRunning... $(date +"%T")"
+    sleep 300
+done
